@@ -474,7 +474,7 @@ impl crate::commands::registry::CommandLoader for BuiltinCommandLoader {
         registry.register(ConfigCommand).await;
         registry.register(McpCommand).await;
         registry.register(StatusCommand).await;
-        
+
         Ok(())
     }
     

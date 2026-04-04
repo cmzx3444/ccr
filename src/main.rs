@@ -59,6 +59,9 @@ enum Commands {
     /// Show version information
     Version,
 
+    /// Upgrade Claude Code to latest version
+    Upgrade,
+
     /// Bridge mode (remote control)
     #[cfg(feature = "bridge")]
     Bridge,
@@ -223,6 +226,13 @@ async fn run(cli: Cli) -> Result<()> {
         Some(Commands::Logout) => {
             commands::auth::logout(settings).await?;
         }
+
+        Some(Commands::Upgrade) => {
+            // 调用升级功能
+            if let Err(e) = commands::upgrade::run().await {
+                eprintln!("Error during upgrade: {}", e);
+            }
+        }
         
         #[cfg(feature = "bridge")]
         Some(Commands::Bridge) => {
@@ -311,6 +321,7 @@ fn print_help() {
     println!("  login             Login to Claude Code");
     println!("  logout            Logout from Claude Code");
     println!("  version           Show version information");
+    println!("  upgrade           Upgrade Claude Code to latest version");
     println!("  help              Show this help message");
     println!();
     #[cfg(feature = "bridge")]

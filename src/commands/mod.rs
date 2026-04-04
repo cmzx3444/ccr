@@ -23,6 +23,8 @@ pub mod mcp;
 pub mod plugins;
 pub mod analytics;
 pub mod buddy;
+pub mod git;
+pub mod upgrade;
 
 // 重新导出主要类型
 pub use types::{Command, CommandContext, CommandResult, CommandBase};
@@ -32,7 +34,7 @@ pub use builtin::{
     VersionCommand, HelpCommand, ClearCommand, ExitCommand,
     ConfigCommand, McpCommand, StatusCommand,
 };
-pub use ultraplan::{
+pub use upgrade::{UpgradeCommand, run as upgrade};
     UltraplanService, UltraplanConfig, UltraplanSession, UltraplanPhase,
     UltraplanResult, ExecutionTarget, PlanEvaluation, build_ultraplan_prompt,
 };
@@ -42,39 +44,42 @@ pub use cli::{
 
 use crate::error::Result;
 use crate::state::AppState;
+use super::git::GitCommandLoader;
 
 /// 初始化命令系统
 pub async fn init() -> Result<CommandManager> {
     let mut manager = CommandManager::new();
-    
+
     // 注册核心命令加载器
     manager.add_loader(BuiltinCommandLoader);
-    
+    manager.add_loader(GitCommandLoader);
+
     // 加载所有命令
     manager.load_all().await?;
-    
-    tracing::info!("Command system initialized with {} commands", 
+
+    tracing::info!("Command system initialized with {} commands",
         manager.registry().len().await);
-    
+
     Ok(manager)
 }
 
 /// 初始化命令系统（带应用状态）
 pub async fn init_with_state(app_state: AppState) -> Result<CommandManager> {
     let mut manager = CommandManager::new();
-    
+
     // 注册核心命令加载器
     manager.add_loader(BuiltinCommandLoader);
-    
+    manager.add_loader(GitCommandLoader);
+
     // 注册 Buddy 命令加载器
     manager.add_loader(BuddyCommandLoader { app_state });
-    
+
     // 加载所有命令
     manager.load_all().await?;
-    
-    tracing::info!("Command system initialized with {} commands", 
+
+    tracing::info!("Command system initialized with {} commands",
         manager.registry().len().await);
-    
+
     Ok(manager)
 }
 
@@ -92,8 +97,9 @@ impl CommandLoader for BuiltinCommandLoader {
         registry.register(ConfigCommand).await;
         registry.register(McpCommand).await;
         registry.register(StatusCommand).await;
-        
-        tracing::debug!("Loaded {} builtin commands", 7);
+        registry.register(UpgradeCommand).await;
+
+        tracing::debug!("Loaded {} builtin commands", 8);
         
         Ok(())
     }
