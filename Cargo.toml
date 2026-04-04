@@ -108,6 +108,7 @@ whoami = "1.5"
 retry = "2.0"
 ctrlc = "3.4"
 glob-match = "0.2"
+num_cpus = "1.16"
 
 [profile.release]
 opt-level = 3

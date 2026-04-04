@@ -35,6 +35,7 @@ pub use builtin::{
     ConfigCommand, McpCommand, StatusCommand,
 };
 pub use upgrade::{UpgradeCommand, run as upgrade};
+pub use ultraplan::{
     UltraplanService, UltraplanConfig, UltraplanSession, UltraplanPhase,
     UltraplanResult, ExecutionTarget, PlanEvaluation, build_ultraplan_prompt,
 };

@@ -1,16 +1,20 @@
 //! 插件管理器
-//! 
+//!
 //! 实现插件的加载、卸载和管理功能
 
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use libloading;
+use serde_json;
 use crate::error::Result;
-use super::plugin::{Plugin, DynamicPlugin, PluginMetadata, PluginState};
+use super::traits::{Plugin, PluginMetadata, PluginState, PluginApi};
+use super::plugin::DynamicPlugin;
 use super::message_bus::MessageBus;
 use super::lifecycle::PluginLifecycle;
 use super::dependency::DependencyManager;
+use super::security::PluginSignatureVerifier;
 
 /// 插件管理器
 #[derive(Debug, Clone)]
@@ -23,6 +27,8 @@ pub struct PluginManager {
     dependency_manager: Arc<RwLock<DependencyManager>>,
     /// 插件目录
     plugin_dirs: Vec<PathBuf>,
+    /// 签名验证器
+    signature_verifier: Arc<PluginSignatureVerifier>,
 }
 
 impl PluginManager {
@@ -33,6 +39,7 @@ impl PluginManager {
             message_bus: Arc::new(MessageBus::new()),
             dependency_manager: Arc::new(RwLock::new(DependencyManager::new())),
             plugin_dirs: Vec::new(),
+            signature_verifier: Arc::new(super::security::create_default_verifier()),
         }
     }
     
@@ -46,23 +53,33 @@ impl PluginManager {
     {
         // 解析插件元数据
         let metadata = self.parse_plugin_metadata(&path)?;
-        
+
+        // 验证插件签名
+        if !self.signature_verifier.verify_plugin(&path, &metadata).await? {
+            return Err(crate::error::ClaudeError::Permission(
+                format!("Plugin signature verification failed for: {}", path.display())
+            ));
+        }
+
         // 检查插件是否已加载
         let mut plugins = self.plugins.write().await;
         if plugins.contains_key(&metadata.name) {
             return Err("Plugin already loaded".into());
         }
-        
+
         // 创建插件实例
         let mut plugin = Box::new(DynamicPlugin::new(path, metadata.clone()));
-        
-        // 加载插件
-        plugin.initialize().await?;
+
+        // 创建插件API（使用元数据中的能力）
+        let api = PluginApi::new(metadata.name.clone(), metadata.capabilities.clone());
+
+        // 初始化插件
+        plugin.initialize(api).await?;
         plugin.start().await?;
-        
+
         // 添加到插件映射
         plugins.insert(metadata.name, Arc::new(RwLock::new(plugin)));
-        
+
         Ok(())
     }
     
@@ -132,16 +149,55 @@ impl PluginManager {
     /// 解析插件元数据
     fn parse_plugin_metadata(&self, path: &PathBuf) -> Result<PluginMetadata>
     {
-        // 这里应该实现从插件文件中解析元数据的逻辑
-        // 暂时返回模拟数据
-        Ok(PluginMetadata {
-            name: "test-plugin".to_string(),
-            version: "1.0.0".to_string(),
-            author: "Test Author".to_string(),
-            description: "Test plugin".to_string(),
-            entry_point: "plugin_entry".to_string(),
-            dependencies: Vec::new(),
-        })
+        // 尝试查找同名的.json文件
+        let json_path = path.with_extension("json");
+        if json_path.exists() {
+            match std::fs::read_to_string(&json_path) {
+                Ok(content) => {
+                    // 解析JSON元数据
+                    let mut metadata: PluginMetadata = serde_json::from_str(&content)?;
+                    // 确保entry_point字段有值（默认为"plugin_entry"）
+                    if metadata.entry_point.is_empty() {
+                        metadata.entry_point = "plugin_entry".to_string();
+                    }
+                    return Ok(metadata);
+                }
+                Err(e) => {
+                    eprintln!("Warning: Failed to read plugin metadata from {}: {}", json_path.display(), e);
+                }
+            }
+        }
+
+        // 如果没有.json文件，尝试从共享库中读取元数据符号
+        // 注意：这里我们只是加载库来读取元数据，然后立即卸载
+        unsafe {
+            let lib = libloading::Library::new(path)?;
+            if let Ok(metadata_symbol) = lib.get::<libloading::Symbol<*const u8>>(b"plugin_metadata") {
+                let metadata_ptr = *metadata_symbol;
+                if !metadata_ptr.is_null() {
+                    let c_str = std::ffi::CStr::from_ptr(metadata_ptr as *const i8);
+                    let json_str = c_str.to_str()?;
+                    let mut metadata: PluginMetadata = serde_json::from_str(json_str)?;
+                    if metadata.entry_point.is_empty() {
+                        metadata.entry_point = "plugin_entry".to_string();
+                    }
+                    return Ok(metadata);
+                }
+            }
+        }
+
+        // 回退到默认元数据（基于文件名）
+        let file_name = path.file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown-plugin");
+
+        Ok(PluginMetadata::new(
+            file_name.to_string(),
+            "1.0.0".to_string(),
+            "Unknown Author".to_string(),
+            format!("Plugin loaded from {}", path.display()),
+            "plugin_entry".to_string(),
+        ))
     }
     
     /// 获取消息总线

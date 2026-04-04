@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use crate::error::Result;
-use super::plugin::{Plugin, PluginState};
+use super::traits::{Plugin, PluginState};
 
 /// 插件生命周期管理器
 #[derive(Debug, Clone)]
