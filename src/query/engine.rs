@@ -5,7 +5,7 @@
 use crate::config::{Config, Settings, SystemPromptBuilder};
 use crate::state::AppState;
 use crate::tools::ToolManager;
-use crate::services::api::claude::ClaudeApi;
+use api_client::{ApiClient, ApiClientConfig};
 use crate::error::Result;
 
 use super::context::QueryContext;
@@ -59,7 +59,7 @@ pub struct QueryEngine {
     /// 工具管理器
     tool_manager: Arc<ToolManager>,
     /// Claude API 客户端
-    api_client: Arc<ClaudeApi>,
+    api_client: Arc<api_client::ApiClient>,
     /// 查询管道
     pipeline: Arc<QueryPipeline>,
     /// 上下文压缩器
@@ -78,8 +78,11 @@ impl QueryEngine {
         let config = QueryEngineConfig::default();
 
         // 创建 API 客户端
-        let api_client = Arc::new(ClaudeApi::new()
-            .with_model(settings.model.clone()));
+        let api_client_config = api_client::ApiClientConfig::default();
+        let api_client = Arc::new(
+            api_client::ApiClient::new("https://api.anthropic.com", api_client_config)
+                .with_api_key(&settings.api_key.unwrap_or_default())
+        );
 
         // 创建查询管道
         let pipeline = Arc::new(QueryPipeline::new());

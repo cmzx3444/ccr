@@ -1,0 +1,98 @@
+[package]
+name = "claude-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Claude Code CLI - Main command-line interface"
+
+# 依赖其他workspace成员
+[dependencies]
+api-client = { path = "../api-client" }
+tools = { path = "../tools" }
+runtime = { path = "../runtime" }
+
+# 从workspace继承依赖
+tokio.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+clap.workspace = true
+console.workspace = true
+indicatif.workspace = true
+dirs.workspace = true
+walkdir.workspace = true
+chrono.workspace = true
+rand.workspace = true
+async-stream.workspace = true
+config.workspace = true
+toml.workspace = true
+uuid.workspace = true
+indexmap.workspace = true
+once_cell.workspace = true
+libloading.workspace = true
+
+# 特定依赖（非workspace共享）
+colorful = "0.2"
+crossterm = "0.27"
+ratatui = "0.26"
+git2 = "0.18"
+reqwest-retry = "0.4"
+reqwest-middleware = "0.2"
+tokio-tungstenite = "0.21"
+aes-gcm = "0.10"
+base64 = "0.21"
+hmac = "0.12"
+sha2 = "0.10"
+yaml-rust = "0.4"
+json5 = "0.4"
+dashmap = "5.5"
+lazy_static = "1.4"
+parking_lot = "0.12"
+crossbeam = "0.8"
+event-listener = "5.2"
+ctrlc = "3.4"
+minijinja = "1.0"
+strum = { version = "0.25", features = ["derive"] }
+nom = "7.1"
+pest = "2.7"
+pest_derive = "2.7"
+sysinfo = "0.30"
+eyre = "0.6"
+color-eyre = "0.6"
+time = "0.3"
+glob = "0.3"
+ignore = "0.4"
+path-slash = "0.1"
+home = "0.5"
+percent-encoding = "2.3"
+
+[features]
+default = []
+bridge = []
+voice = []
+mcp-support = []
+daemon = []
+experimental = []
+plugins = []
+
+[[bin]]
+name = "claude"
+path = "src/main.rs"
+
+[[bin]]
+name = "claude-bridge"
+path = "src/bin/bridge.rs"
+required-features = ["bridge"]
+
+[dev-dependencies]
+mockito = "1.1"
+tempfile = "3.8"
+assert_cmd = "2.0"
+predicates = "3.0"
+tokio-test = "0.4"

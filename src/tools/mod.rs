@@ -39,7 +39,7 @@ pub use file_tools::{FileReadTool, FileEditTool, FileWriteTool};
 pub use search_tools::{GlobTool, GrepTool};
 pub use command_tools::{BashTool, PowerShellTool};
 pub use web_tools::{WebFetchTool, WebSearchTool};
-pub use skill_tools::SkillTool;
+pub use skill_tools::{SkillTool, SkillListTool};
 pub use message_tools::SendMessageTool;
 pub use task_tools::TaskCreateTool;
 pub use plan_tools::{EnterPlanModeTool, ExitPlanModeTool};
@@ -94,6 +94,7 @@ impl ToolLoader for BuiltinToolLoader {
         
         // 注册系统工具
         registry.register(SkillTool).await;
+        registry.register(SkillListTool).await;
         registry.register(SendMessageTool).await;
         registry.register(TaskCreateTool).await;
         registry.register(EnterPlanModeTool).await;
@@ -137,6 +138,7 @@ pub fn get_tool_names() -> Vec<String> {
         "WebFetch".to_string(),
         "WebSearch".to_string(),
         "Skill".to_string(),
+        "SkillList".to_string(),
         "SendMessage".to_string(),
         "TaskCreate".to_string(),
         "EnterPlanMode".to_string(),

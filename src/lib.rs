@@ -25,7 +25,7 @@ pub mod analytics;
 pub mod utils;
 pub mod voice;
 pub mod daemon;
- pub mod features;
+pub mod features;
 pub mod bootstrap;
 pub mod services;
 pub mod performance;
@@ -33,6 +33,8 @@ pub mod security;
 pub mod api;
 pub mod plugins;
 pub mod query;
+pub mod skills;
+pub mod editor_compat;
 
 // Re-export commonly used types
 pub use error::{ClaudeError, Result};
